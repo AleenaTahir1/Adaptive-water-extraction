@@ -1,9 +1,5 @@
 # Agent-Based Modeling of Adaptive Water Extraction Strategies Using Q-Learning Under Climate Stress
 
-**Author:** Aleena Tahir (F23607001)
-**Course:** Agent-Based Modeling — National University of Technology
-**Instructor:** Ms. Sumera Aslam
-
 ## Overview
 
 A Mesa-based agent-based model simulating irrigator farmers who share a common water
@@ -76,6 +72,10 @@ python -m experiments.analyze
 | Climate scenario | — | stable/gradual/shock/stochastic | Climate factor profile |
 | Monitoring probability | p_detect | 0.0–1.0 | Probability monitor catches over-extractor |
 | Q-learner proportion | — | 0–100% | Mix of Q-learners vs fixed-strategy agents |
+
+
+## Authors
+
 
 ## License
 
