@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+# CSVs from batch_run are 33 MB each (~94 MB total) -- exclude.
+data/results/*.csv
+.ipynb_checkpoints/
+.vscode/
+.idea/
+*.egg-info/

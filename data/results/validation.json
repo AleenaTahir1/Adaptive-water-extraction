@@ -1,0 +1,20 @@
+{
+  "check1_tragedy": {
+    "passed": true,
+    "no_enforcement_final_water": 5.5521304275239745,
+    "with_enforcement_final_water": 504.0762661072496,
+    "note": "Without enforcement, resource should collapse (< 50 units); with enforcement, it should sustain (> 200)."
+  },
+  "check2_scarcity_aggression": {
+    "passed": true,
+    "stable_frac_defect_shockwindow": 0.25315,
+    "shock_frac_defect_shockwindow": 0.3648,
+    "note": "Perolat et al. 2017: scarcity should drive aggression. With enforcement on, compare frac_defect during steps 200-300 under stable (abundant) vs shock (scarce)."
+  },
+  "check3_shock_signal": {
+    "passed": true,
+    "stable_water_at_step_300": 507.1777809962408,
+    "shock_water_at_step_300": 1.546317801069838,
+    "note": "Indus 2022-style shock should leave a measurable dip in water level."
+  }
+}
