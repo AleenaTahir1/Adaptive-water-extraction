@@ -1,7 +1,7 @@
 # Agent-Based Modeling of Adaptive Water Extraction Strategies Using Q-Learning Under Climate Stress
 
 ## Overview
-
+.
 A Mesa-based agent-based model simulating irrigator farmers who share a common water
 resource (river / aquifer) and learn extraction strategies via tabular Q-learning. The model
 investigates whether sustainable resource management can emerge from decentralized
