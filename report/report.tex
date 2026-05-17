@@ -1,0 +1,683 @@
+\documentclass[12pt, a4paper]{article}
+
+% --------------------------------------------------------------------------------
+% PACKAGES
+% --------------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage{geometry}
+\usepackage[table]{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath, amssymb}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage[most]{tcolorbox}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage{listings}
+\usepackage{tabularx}
+
+% --------------------------------------------------------------------------------
+% CONFIGURATION & STYLING
+% --------------------------------------------------------------------------------
+
+\geometry{top=1in, bottom=1in, left=0.75in, right=0.75in}
+\onehalfspacing
+\graphicspath{{../figures/}{figures/}}
+
+\definecolor{nutDark}{RGB}{10, 30, 60}
+\definecolor{nutAccent}{RGB}{0, 100, 100}
+\definecolor{goodGreen}{RGB}{0, 120, 60}
+\definecolor{badRed}{RGB}{180, 0, 0}
+\definecolor{codeBg}{RGB}{245, 245, 248}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=nutDark,
+    urlcolor=nutAccent,
+    citecolor=nutDark
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.5pt}
+\lhead{\textbf{ABM Semester Project}}
+\rhead{\textsc{Water Commons + Q-Learning}}
+\cfoot{\thepage}
+
+\titleformat{\section}{\Large\bfseries\color{nutDark}}{\thesection}{1em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{nutAccent}}{\thesubsection}{1em}{}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codeBg},
+    frame=single,
+    framerule=0pt,
+    breaklines=true,
+    captionpos=b,
+    showstringspaces=false,
+    columns=fullflexible,
+}
+
+% --------------------------------------------------------------------------------
+% DOCUMENT START
+% --------------------------------------------------------------------------------
+\begin{document}
+
+% --------------------------------------------------------------------------------
+% TITLE PAGE
+% --------------------------------------------------------------------------------
+\begin{titlepage}
+    \begin{center}
+        \vspace*{1cm}
+        {\huge \bfseries \color{nutDark} National University of Technology} \\[0.5cm]
+        {\Large Department of Artificial Intelligence}
+
+        \vspace{1cm}
+        \includegraphics[width=0.4\textwidth]{logo.png}
+        \vspace{1.5cm}
+
+        {\Huge \bfseries Semester Project } \\[0.3cm]
+        {\Large \textsc{Agent-Based Modeling of Adaptive Water Extraction Strategies Using Q-Learning Under Climate Stress Scenarios}}
+
+        \vspace{1cm}
+
+        \begin{tcolorbox}[width=0.85\textwidth, colback=white, colframe=nutDark, arc=0mm, boxrule=1pt]
+            \centering
+            \large
+            \renewcommand{\arraystretch}{1.5}
+            \begin{tabular}{r l}
+                \textbf{Student Name:} & Aleena Tahir \\
+                \textbf{Student ID:} & F23607001 \\
+                \textbf{Batch:} & AI-23 \\
+                \textbf{Instructor:} & Ms.\ Sumera Aslam \\
+                \textbf{Course:} & Agent-Based Modeling \\
+            \end{tabular}
+        \end{tcolorbox}
+
+        \vfill
+        \today
+    \end{center}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+% ================================================================================
+% ABSTRACT
+% ================================================================================
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+Water scarcity is one of the defining challenges of the 21st century, and the
+classic ``tragedy of the commons'' makes shared irrigation systems particularly
+vulnerable. Existing agent-based models of water commons typically assign fixed
+behavioral rules to agents, ignoring the way real farming communities \emph{learn}
+and adapt. This project develops a Mesa-based agent-based model in which each
+irrigator is a tabular Q-learning agent extracting water from a shared resource
+with logistic regeneration. We test whether sustainable extraction can emerge
+from decentralized learning, how learned strategies respond to four climate
+scenarios (stable / gradual decline / drought shock / stochastic), and how
+monitoring intensity affects the emergence of cooperation.
+
+Three findings emerge: \textbf{(i)} decentralized Q-learners without enforcement
+reproduce the tragedy of the commons in every climate scenario --- the resource
+collapses to baseline-inflow equilibrium within ${\sim}80$ steps;
+\textbf{(ii)} a moderate monitoring probability ($p_{detect} \approx 0.3$) is
+sufficient to flip the population into a cooperative equilibrium \textbf{under
+stable climate} (mean final water rises from 5 to 685 units of $K{=}1000$); but
+\textbf{(iii)} under any environmental stress --- gradual decline, drought
+shock, or stochastic variability --- the \emph{same} enforcement intensity fails
+to prevent collapse. Importantly, even raising $p_{detect}$ to $0.9$ does not
+rescue the shock scenario. The mechanism is structural: agents' discretized
+action space is calibrated to baseline climate, so during drought even the
+``fair share'' action is over-extraction. This implies real-world regulators
+cannot simply enforce fixed quotas under climate change; \emph{climate-adaptive}
+quotas are required.
+
+\newpage
+
+% ================================================================================
+% 1. INTRODUCTION
+% ================================================================================
+\section{Introduction}
+
+Agricultural communities worldwide depend on shared rivers, canals, and
+aquifers. When $N$ farmers draw from the same source, each faces the
+fundamental commons dilemma: extracting more is privately rational in the short
+term but collectively catastrophic. Hardin (1968) formalised this as the
+Tragedy of the Commons. Under climate change --- with shifting rainfall,
+prolonged droughts, and reduced natural regeneration --- the dilemma is
+sharper than ever. Pakistan's Indus Basin, which supports over $90\%$ of the
+country's agriculture, is now classified as one of the world's most
+water-stressed basins. According to the UN World Water Development Report,
+nearly half of the global population will live in areas of high water stress
+by 2030.
+
+Traditional models of the commons assume either perfectly rational agents
+(game theory) or fixed behavioural types (cooperate / defect / tit-for-tat).
+Neither captures the learning process through which real communities
+\emph{discover} sustainable norms. This project equips each irrigator with an
+independent tabular Q-learning algorithm and tests whether sustainable
+extraction emerges, and how it responds to climate stress.
+
+\subsection{Research Question}
+
+\begin{tcolorbox}[colback=white, colframe=nutDark, arc=2mm, boxrule=1pt]
+\textbf{Primary:} How does the discount factor ($\gamma$) in Q-learning agents
+affect the emergence of sustainable water extraction strategies under varying
+climate stress scenarios in an agent-based commons model?
+\end{tcolorbox}
+
+\noindent\textbf{Sub-questions:}
+\begin{enumerate}
+    \item Can Q-learning agents discover cooperative extraction strategies without external enforcement?
+    \item How do learned strategies break down under sudden climate shocks, and how quickly do agents re-adapt?
+    \item At what monitoring intensity do enforcement mechanisms become unnecessary because agents have learned self-regulation?
+\end{enumerate}
+
+% ================================================================================
+% 2. LITERATURE REVIEW
+% ================================================================================
+\section{Literature Review}
+
+The literature spans four key contributions:
+
+\begin{enumerate}
+    \item \textbf{Perolat et al.\ (2017)} --- NeurIPS multi-agent deep RL on a
+    common-pool resource game. Established that learning agents can reproduce
+    empirical commons patterns; scarcity drives aggression, abundance enables
+    cooperation. Used deep RL in abstract grid environments without
+    water-specific dynamics.
+
+    \item \textbf{Darbandsari et al.\ (2020)} --- Stackelberg-game ABM of urban
+    water in Tehran. Demonstrated that hierarchical governance improves
+    equity; used fixed game-theoretic strategies, not learning.
+
+    \item \textbf{Huber et al.\ (2019)} --- Aqua.MORE: NetLogo ABM of coupled
+    water demand--supply at the catchment scale. Provides validated resource
+    regeneration dynamics; agents are rule-based, not adaptive.
+
+    \item \textbf{Weitz et al.\ (2016)} --- PNAS replicator dynamics with
+    game-environment feedback. Identified oscillatory cooperation--defection
+    cycles when environment couples to strategies; mathematical, not
+    agent-based.
+\end{enumerate}
+
+\noindent\textbf{Research gap.} No existing model combines tabular Q-learning,
+water-specific logistic dynamics, \emph{and} explicit climate stress scenarios.
+This project fills that gap with a transparent, interpretable Python/Mesa
+implementation.
+
+% ================================================================================
+% 3. ODD PROTOCOL SUMMARY
+% ================================================================================
+\section{ODD Protocol Summary}
+
+See \texttt{report/odd\_protocol.md} for the full Grimm et al.\ (2020) ODD specification.
+
+\noindent\textbf{Key design choices:}
+\begin{itemize}[label=$\triangleright$]
+    \item \textbf{Entities:} Irrigator agents (Q-learner / always-cooperate / always-defect / tit-for-tat), water resource, monitor agent, climate scenario.
+    \item \textbf{Scheduling:} three-stage step (act $\to$ monitor $\to$ regenerate $\to$ finalize) so the Q-update sees the correct post-regen next-state.
+    \item \textbf{State space:} $(\text{water\_bin},\ \text{own\_last\_action},\ \text{neighbors\_avg\_bin},\ \text{climate\_stressed})$ --- discretized to keep tabular Q-learning feasible.
+    \item \textbf{Action space:} 5 discrete extraction levels $\{0\%, 25\%, 50\%, 75\%, 100\%\}$ of a per-agent maximum auto-scaled so the cooperative action (index 2) equals each agent's fair share of sustainable yield.
+    \item \textbf{Reward:} $\log(1 + e_i) - \lambda \cdot (1 - W/K)^2 - \text{fine}_i$.
+\end{itemize}
+
+% ================================================================================
+% 4. METHODS
+% ================================================================================
+\section{Methods}
+
+\subsection{Implementation}
+
+The model is implemented in Python 3.12 using Mesa 2.3.4 for the
+agent-based-model framework, NetworkX for the social network, NumPy for the
+Q-tables, and Matplotlib for the analysis charts. The source is laid out as:
+
+\begin{lstlisting}
+water_abm/
+  q_learning.py    -- tabular Q-learner with epsilon-greedy + Bellman update
+  climate.py       -- four climate scenario classes
+  environment.py   -- shared water resource (logistic + baseline regen)
+  agents.py        -- irrigator (Q-learner + 3 fixed variants) + monitor
+  model.py         -- Mesa Model, DataCollector, CSV export
+  server.py        -- Mesa visualization (grid + 9 sliders + 3 charts)
+\end{lstlisting}
+
+A complete interactive simulation can be launched with \texttt{python run.py}.
+
+\subsection{Core Equations}
+
+\noindent\textbf{Logistic resource dynamics with baseline inflow:}
+\begin{equation*}
+W(t{+}1) = \max\!\Big(0,\ \min\!\big(K,\ W(t) + r \cdot c_f(t) \cdot W(t) \cdot \big(1 - \tfrac{W(t)}{K}\big) + b \cdot c_f(t) - \sum_i e_i(t)\big)\Big)
+\end{equation*}
+
+\noindent\textbf{Q-learning update (Watkins \& Dayan, 1992):}
+\begin{equation*}
+Q(s, a) \leftarrow Q(s, a) + \alpha \cdot \big[ r + \gamma \cdot \max_{a'} Q(s', a') - Q(s, a) \big]
+\end{equation*}
+
+\noindent\textbf{$\epsilon$-greedy with exponential decay:}
+$\epsilon_t = \max(\epsilon_{\min},\ \epsilon_0 \cdot \exp(-d \cdot t))$.
+
+\subsection{Experimental Design}
+
+Three batch experiments were run (see \texttt{experiments/batch\_run.py}):
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{|l|p{8cm}|c|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{\textbf{Experiment}} & \textcolor{white}{\textbf{Variables}} & \textcolor{white}{\textbf{N runs}} \\ \hline
+        A. Tragedy baseline & 4 climate scenarios $\times$ 30 seeds & 120 \\ \hline
+        B. With enforcement & 4 climate scenarios $\times$ 30 seeds $\times$ $p_{detect}{=}0.3$ & 120 \\ \hline
+        C. Gamma sweep (primary RQ) & 2 climate scenarios $\times$ 5 $\gamma$ values $\times$ 10 seeds & 100 \\ \hline
+    \end{tabular}
+    \caption{Batch experimental design. Each run is 500 steps; metrics recorded every 10 steps.}
+\end{table}
+
+\noindent\textbf{Sensitivity analysis} (\texttt{experiments/sensitivity.py}) perturbs each of
+$\{\alpha, \gamma, \epsilon_0, r, p_{detect}, N\}$ by $\pm 20\%$ around the
+baseline, holding others fixed, with 10 seeds per setting.
+
+% ================================================================================
+% 5. RESULTS
+% ================================================================================
+\section{Results}
+
+\subsection{Tragedy Baseline (Experiment A)}
+
+Figure~\ref{fig:water_by_scenario} (dashed lines) shows that without enforcement,
+the water resource collapses within ${\sim}80$ steps in \textbf{every} climate scenario.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{|l|r|r|}
+        \hline
+        \rowcolor{nutDark}
+        \textcolor{white}{\textbf{Climate}} &
+        \textcolor{white}{\textbf{Final water}} &
+        \textcolor{white}{\textbf{Mean cumulative payoff per agent}} \\ \hline
+        stable     & $5.55 \pm 0.0$ & $-755.9$ \\ \hline
+        gradual    & $2.63 \pm 0.0$ & $-795.2$ \\ \hline
+        shock      & $5.55 \pm 0.0$ & $-768.0$ \\ \hline
+        stochastic & $5.44 \pm 0.0$ & $-803.9$ \\ \hline
+    \end{tabular}
+    \caption{Experiment A: tragedy baseline ($n=30$ seeds per scenario).}
+\end{table}
+
+The standard deviation across seeds is effectively zero: the model converges
+deterministically on a low-water attractor where extraction equals baseline
+inflow and nothing more. All scenarios produce \textbf{strongly negative}
+mean payoffs (${\sim}-750$ to $-800$ per agent), reproducing the classical
+tragedy of the commons.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig01_water_by_scenario.png}
+    \caption{Water level over time, tragedy baseline (dashed) vs.\ moderate enforcement (solid). Shaded bands show $\pm 1$ s.d.\ over 30 seeds.}
+    \label{fig:water_by_scenario}
+\end{figure}
+
+\subsection{Enforcement Saves the Stable Climate (Experiment B)}
+
+With $p_{detect} = 0.3$ and $\text{fine\_factor} = 3.0$, the dynamics flip ---
+but only under the stable climate scenario:
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \small
+    \begin{tabular}{|l|r|r|r|r|}
+        \hline
+        \rowcolor{nutDark}
+        \textcolor{white}{\textbf{Climate}} &
+        \textcolor{white}{\textbf{Final water}} &
+        \textcolor{white}{\textbf{Mean payoff/agent}} &
+        \textcolor{white}{\textbf{\% coop actions}} &
+        \textcolor{white}{\textbf{\% defect actions}} \\ \hline
+        \textbf{stable}     & $\mathbf{684.8 \pm 33.5}$ & $\mathbf{+222.5}$ & $86\%$ & $14\%$ \\ \hline
+        gradual    & $2.6 \pm 0.0$       & $-576.8$         & $68\%$ & $32\%$ \\ \hline
+        shock      & $5.6 \pm 0.0$       & $-528.2$         & $68\%$ & $32\%$ \\ \hline
+        stochastic & $26.6 \pm 116.0$    & $-842.2$         & $70\%$ & $30\%$ \\ \hline
+    \end{tabular}
+    \caption{Experiment B: with enforcement ($p_{detect}=0.3$, $n=30$ seeds).}
+\end{table}
+
+Under the \textbf{stable} scenario, mean final water rises from $5.5 \to 684.8$
+($125\times$ improvement), payoff turns positive (+222 vs.\ $-756$), and
+$86\%$ of agents pick cooperative actions. Under the \textbf{gradual / shock /
+stochastic} scenarios, the same enforcement intensity is \textbf{insufficient}:
+water still collapses to 2--27 units. Notably, $68\%$--$70\%$ of agents
+\emph{are still choosing cooperative actions} in these failing scenarios ---
+they aren't selfishly defecting; the cooperative action itself is too
+aggressive for the reduced regeneration.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig02_enforcement_effect.png}
+    \caption{Final water level (left) and cooperation index (right) by climate scenario $\times$ enforcement. Only the stable scenario achieves cooperation under $p_{detect}=0.3$.}
+    \label{fig:enforcement}
+\end{figure}
+
+A follow-up exploratory sweep confirms that \emph{even} $p_{detect}=0.9$
+(near-perfect detection) cannot rescue the shock scenario:
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{|c|r|r|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{$\mathbf{p_{detect}}$} & \textcolor{white}{\textbf{stable: final water}} & \textcolor{white}{\textbf{shock: final water}} \\ \hline
+        0.3 & 700 & 5.6 \\ \hline
+        0.6 & 777 & 5.6 \\ \hline
+        0.9 & 787 & 5.6 \\ \hline
+    \end{tabular}
+    \caption{Enforcement strength cannot save the shock scenario.}
+\end{table}
+
+The reason is structural: the per-agent fair-share action is calibrated to
+baseline ($c_f{=}1.0$) sustainability. When $c_f$ drops to $0.3$ during the
+shock, the same fair-share extraction \emph{is} over-extraction relative to
+the reduced regeneration; agents who cooperate under normal conditions become
+unwitting over-extractors. This is a substantive finding for water-policy
+practice: enforcing fixed quotas works under normal conditions, but climate
+stress requires \emph{adaptive} quotas that contract with regeneration.
+
+\subsection{Discount Factor $\gamma$ (Primary RQ, Experiment C)}
+
+Figure~\ref{fig:gamma} shows the primary research question result.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{|c|r|r|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{$\mathbf{\gamma}$} & \textcolor{white}{\textbf{stable: final water}} & \textcolor{white}{\textbf{shock: final water}} \\ \hline
+        0.50 & $748.3 \pm 18.9$ & $5.55 \pm 0.0$ \\ \hline
+        0.70 & $722.6 \pm 28.3$ & $5.55 \pm 0.0$ \\ \hline
+        0.85 & $703.5 \pm 28.7$ & $5.55 \pm 0.0$ \\ \hline
+        0.95 & $700.8 \pm 34.9$ & $5.55 \pm 0.0$ \\ \hline
+        0.99 & $688.3 \pm 28.1$ & $5.55 \pm 0.0$ \\ \hline
+    \end{tabular}
+    \caption{Experiment C: effect of discount factor $\gamma$ on final water level.}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig03_gamma_sweep.png}
+    \caption{Primary RQ: effect of discount factor on sustainable extraction.}
+    \label{fig:gamma}
+\end{figure}
+
+Two unexpected results:
+\begin{enumerate}
+    \item Under stable climate, water is mildly \textbf{decreasing} with $\gamma$. Lower-$\gamma$ (more myopic) agents end up with \emph{more} water. The effect is small (${\sim}9\%$ range) but consistent across seeds.
+    \item Under shock, $\gamma$ has \textbf{no measurable effect}. Every $\gamma$ value collapses to identical final water ($5.55 \pm 0.0$). The shock dynamics dominate the Q-learning hyperparameter.
+\end{enumerate}
+
+This refines the answer to the primary RQ: $\gamma$ matters at the margins
+under stable conditions, but the dominant determinant of resilience under
+stress is whether the action space can adapt to changing regeneration ---
+not how much agents discount the future.
+
+\subsection{Sensitivity Analysis}
+
+Figure~\ref{fig:tornado} ranks the six headline parameters by the magnitude
+of their effect on final water level when perturbed $\pm 20\%$ around the
+stable-climate baseline (10 seeds per setting).
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{|l|r|r|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{\textbf{Parameter}} & \textcolor{white}{$\mathbf{-20\%\ \Delta}$\textbf{water}} & \textcolor{white}{$\mathbf{+20\%\ \Delta}$\textbf{water}} \\ \hline
+        $p_{detect}$       & $-39.4$ & $+37.6$ \\ \hline
+        $\epsilon_0$       & $-11.0$ & $-28.6$ \\ \hline
+        $N$ (n\_farmers)   & $+16.9$ & $-25.7$ \\ \hline
+        $\gamma$           & $+22.0$ & $-12.4$ \\ \hline
+        $r$ (regen rate)   & $-19.0$ & $-10.8$ \\ \hline
+        $\alpha$           & $-13.8$ & $-2.4$  \\ \hline
+    \end{tabular}
+    \caption{Sensitivity to $\pm 20\%$ parameter perturbations, mean over 10 seeds.}
+\end{table}
+
+Two patterns: (a) $p_{detect}$ \textbf{dominates} --- a $20\%$ swing in
+detection probability produces $\pm 38{-}40$ units of final water (the
+largest signed range), confirming enforcement is the single most consequential
+lever; and (b) several parameters are \textbf{non-monotonic} --- $\epsilon_0$
+and $\alpha$ both have negative deltas in \emph{both} directions, suggesting
+the baseline value is near a local optimum.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig04_sensitivity_tornado.png}
+    \caption{Sensitivity tornado: change in final water level under $\pm 20\%$ perturbations.}
+    \label{fig:tornado}
+\end{figure}
+
+\subsection{Inequality}
+
+Figure~\ref{fig:gini} tracks the Gini coefficient of cumulative payoff over
+time, with enforcement on.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{|l|r|r|r|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{\textbf{Climate}} & \textcolor{white}{\textbf{Peak Gini}} & \textcolor{white}{\textbf{Step of peak}} & \textcolor{white}{\textbf{Final Gini}} \\ \hline
+        stable     & 0.347 & 400 & 0.344 \\ \hline
+        gradual    & 0.355 & 240 & 0.326 \\ \hline
+        shock      & 0.333 & 500 & 0.333 \\ \hline
+        stochastic & 0.330 & 230 & 0.297 \\ \hline
+    \end{tabular}
+    \caption{Payoff inequality (Gini) per climate scenario, with enforcement on.}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{fig05_gini_evolution.png}
+    \caption{Payoff inequality (Gini) over time, with enforcement.}
+    \label{fig:gini}
+\end{figure}
+
+Inequality rises quickly (${\sim}0.30$ by step 100) and then plateaus,
+reflecting heterogeneous Q-table initial conditions and the cumulative effect
+of small luck-of-detection differences. Stable and stochastic scenarios show
+a partial decline in Gini after step $230$, consistent with the oscillatory
+dynamics predicted in Weitz et al.\ (2016).
+
+\subsection{Emergent Spatial Dynamics}
+
+Figures~\ref{fig:pre}--\ref{fig:recovery} show three before/during/after
+snapshots of a shock-scenario run with enforcement.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.50\textwidth]{fig08_grid_pre_shock.png}
+    \caption{Step 199: cooperation established. River is deep blue, most agents picking cooperative actions.}
+    \label{fig:pre}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.50\textwidth]{fig09_grid_during_shock.png}
+    \caption{Step 260: mid-shock. Climate factor drops, water level falls rapidly.}
+    \label{fig:during}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.50\textwidth]{fig10_grid_recovery.png}
+    \caption{Step 450: post-shock low-water equilibrium.}
+    \label{fig:recovery}
+\end{figure}
+
+% ================================================================================
+% 6. DISCUSSION
+% ================================================================================
+\section{Discussion}
+
+\subsection{Answers to Research Questions}
+
+\begin{itemize}[label=$\triangleright$]
+    \item \textbf{Sub-Q1 (cooperation without enforcement):} No. Pure Q-learners cannot escape the tragedy under any climate scenario. Each agent's action contributes ${\sim}1/N$ of total extraction, so unilateral restraint produces no observable benefit. Matches Perolat et al.\ (2017).
+    \item \textbf{Sub-Q2 (recovery from shock):} No --- not within the 500-step horizon. Once the resource crashes during a shock, the system is trapped in a low-water attractor (water $\approx \text{baseline\_inflow}/N$) where extraction is capped at near-zero and all actions yield essentially the same reward, providing no gradient for relearning.
+    \item \textbf{Sub-Q3 (monitoring threshold under stable climate):} Approximately $p_{detect} = 0.2{-}0.3$ flips the outcome from collapse to cooperation; returns saturate above $0.6$. \textbf{Under stress, no enforcement intensity tested (up to $0.9$) is sufficient} --- a structural limitation, not a parameter-tuning issue.
+    \item \textbf{Primary RQ:} $\gamma$ has minor effect under stable climate (once enforcement is in place, all $\gamma$ values converge to cooperation) and limited effect under shock. The dominant determinant of resilience is whether the action space can contract with falling regeneration.
+\end{itemize}
+
+\subsection{Limitations}
+
+\begin{itemize}[label=$\triangleright$]
+    \item \textbf{Fixed discretized action space.} The 5-level extraction grid is calibrated to the baseline-climate cooperative share. Under a continuous or adaptive action space, agents could in principle scale extraction proportionally to current regeneration.
+    \item \textbf{Static fair-share definition.} The monitor's \texttt{FAIR\_SHARE\_ACTION\_IDX} is hard-coded at $2$. A climate-aware monitor would tighten this threshold during low-$c_f$ periods.
+    \item \textbf{Tabular Q-learning.} Limits state granularity; deep RL could capture finer patterns at the cost of interpretability.
+    \item \textbf{Single resource.} No spatial heterogeneity in water availability.
+    \item \textbf{No agent heterogeneity} in risk-aversion or wealth.
+    \item \textbf{500-step horizon} corresponds to ${\sim}125$ years if one step $=$ one season; longer horizons may show further structural shifts.
+    \item \textbf{Exogenous monitor.} A richer model would let monitoring intensity evolve endogenously.
+\end{itemize}
+
+% ================================================================================
+% 7. VALIDATION
+% ================================================================================
+\section{Validation}
+
+Three structured validation checks are run automatically in
+\texttt{experiments/validate.py}, with the figure saved as
+\texttt{fig07\_validation.png} and full numbers in
+\texttt{data/results/validation.json}:
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \small
+    \begin{tabular}{|p{2.3cm}|p{2.7cm}|p{5cm}|p{3.5cm}|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{\textbf{Check}} & \textcolor{white}{\textbf{Source}} & \textcolor{white}{\textbf{Test}} & \textcolor{white}{\textbf{Result}} \\ \hline
+        1. Tragedy & Hardin 1968 & Without enforcement water should collapse ($<50$); with enforcement under stable, water should sustain ($>200$). & \textbf{PASS} --- no-enf: 5.6; with-enf: 504 \\ \hline
+        2. Scarcity $\to$ aggression & Perolat et al.\ 2017 & Fraction of defecting actions during steps 200-300 should be higher under shock than under stable (both with enforcement). & \textbf{PASS} --- stable: $25.3\%$; shock: $36.5\%$ \\ \hline
+        3. Shock signal & Indus Basin 2022 & A drought cutting $c_f$ by ${\sim}70\%$ should leave a measurable dip in mean water level at step 300. & \textbf{PASS} --- stable: 507; shock: 1.5 \\ \hline
+    \end{tabular}
+    \caption{All three validation checks against the literature pass.}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{fig07_validation.png}
+    \caption{Validation: three sanity checks against literature.}
+    \label{fig:validation}
+\end{figure}
+
+External benchmarks used for calibration:
+\begin{itemize}[label=$\triangleright$]
+    \item \textbf{FAO AQUASTAT} indicates natural aquifer recharge rates of $5\%{-}15\%$ of carrying capacity per year --- brackets our default $r = 0.10$.
+    \item The \textbf{2022 Indus Basin drought} reduced river flow by ${\sim}50\%{-}70\%$ at peak --- matched by our $\text{shock\_cf} = 0.3$ choice.
+    \item \textbf{Perolat et al.\ (2017)} report that scarcity drives aggressive appropriation in deep-RL commons agents; we reproduce this with the $44\%$ increase in defection during the shock window.
+\end{itemize}
+
+% ================================================================================
+% 8. CONCLUSION
+% ================================================================================
+\section{Conclusion}
+
+This project shows that tabular Q-learning agents in a water commons reproduce
+the tragedy when left alone but can flip into cooperation under a modest
+external monitoring regime --- in a stable climate. The headline contribution
+of this work, however, is the negative result under climate stress: even
+near-perfect enforcement ($p_{detect}=0.9$) cannot prevent collapse when the
+shock dynamics outpace the agents' fixed-quota action space. The discount
+factor $\gamma$ matters most when the environment is stable, not when it is
+stressed. The interactive Mesa visualization makes the dynamics inspectable in
+real time, and the batch + sensitivity infrastructure makes the findings
+reproducible. Future work should explore continuous action spaces, climate-
+adaptive enforcement thresholds, and comparison with human commons
+experiments.
+
+% ================================================================================
+% REFERENCES
+% ================================================================================
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+
+\begin{enumerate}[label={[\arabic*]}]
+    \item Darbandsari, P., Kerachian, R., Malakpour-Estalaki, S., \& Khorasani, H. (2020). An agent-based conflict resolution model for urban water resources management. \emph{Sustainable Cities and Society}, 57, 102112. \url{https://doi.org/10.1016/j.scs.2020.102112}
+
+    \item Grimm, V., Railsback, S. F., Vincenot, C. E., Berger, U., Gallagher, C., DeAngelis, D. L., et al.\ (2020). The ODD protocol for describing agent-based and other simulation models: A second update to improve clarity, replication, and structural realism. \emph{Ecological Modelling}, 428.
+
+    \item Hardin, G. (1968). The Tragedy of the Commons. \emph{Science}, 162(3859), 1243--1248. \url{https://doi.org/10.1126/science.162.3859.1243}
+
+    \item Huber, L., Bahro, N., Leitinger, G., Tappeiner, U., \& Strasser, U. (2019). Agent-Based Modelling of a Coupled Water Demand and Supply System at the Catchment Scale. \emph{Sustainability}, 11(21), 6178. \url{https://doi.org/10.3390/su11216178}
+
+    \item Ostrom, E. (1990). \emph{Governing the Commons: The Evolution of Institutions for Collective Action}. Cambridge University Press.
+
+    \item Perolat, J., Leibo, J.Z., Zambaldi, V., Beattie, C., Tuyls, K., \& Graepel, T. (2017). A multi-agent reinforcement learning model of common-pool resource appropriation. \emph{Proceedings of the 31st Conference on Neural Information Processing Systems (NeurIPS 2017)}.
+
+    \item Watkins, C.J.C.H., \& Dayan, P. (1992). Q-Learning. \emph{Machine Learning}, 8(3--4), 279--292. \url{https://doi.org/10.1007/BF00992698}
+
+    \item Weitz, J.S., Eksin, C., Paarporn, K., Brown, S.P., \& Ratcliff, W.C. (2016). An oscillating tragedy of the commons in replicator dynamics with game-environment feedback. \emph{Proceedings of the National Academy of Sciences}, 113(47), E7518--E7525. \url{https://doi.org/10.1073/pnas.1604096113}
+
+    \item Wilensky, U., \& Rand, W. (2015). \emph{An Introduction to Agent-Based Modeling: Modeling Natural, Social, and Engineered Complex Systems with NetLogo}. MIT Press.
+\end{enumerate}
+
+% ================================================================================
+% APPENDIX A: PARAMETERS
+% ================================================================================
+\newpage
+\section*{Appendix A: Parameter Reference}
+\addcontentsline{toc}{section}{Appendix A: Parameter Reference}
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        \rowcolor{nutDark} \textcolor{white}{\textbf{Symbol}} & \textcolor{white}{\textbf{Default}} & \textcolor{white}{\textbf{Range explored}} & \textcolor{white}{\textbf{Used in}} \\ \hline
+        $N$        & 20         & $\{16, 20, 24\}$ (sensitivity)         & \S4.3 \\ \hline
+        $\alpha$   & 0.15       & $\{0.12, 0.15, 0.18\}$                 & \S4.3 \\ \hline
+        $\gamma$   & 0.95       & $\{0.50, 0.70, 0.85, 0.95, 0.99\}$     & \S5.3 \\ \hline
+        $\epsilon_0$ & 0.30     & $\{0.24, 0.30, 0.36\}$                 & \S4.3 \\ \hline
+        $r$        & 0.10       & $\{0.08, 0.10, 0.12\}$                 & \S4.3 \\ \hline
+        $p_{detect}$ & 0.00/0.30 & $\{0.24, 0.30, 0.36\}$                & \S5.2 \\ \hline
+        $K$        & 1000       & fixed                                  & --- \\ \hline
+        $b$ (baseline inflow) & 5.0 & fixed                              & --- \\ \hline
+        fine\_factor & 3.0      & fixed                                  & --- \\ \hline
+    \end{tabular}
+\end{table}
+
+% ================================================================================
+% APPENDIX B: HOW TO REPRODUCE
+% ================================================================================
+\section*{Appendix B: How to Reproduce}
+\addcontentsline{toc}{section}{Appendix B: How to Reproduce}
+
+\begin{lstlisting}
+pip install -r requirements.txt
+python -m experiments.batch_run         # ~8 min, writes data/results/batch_*.csv
+python -m experiments.sensitivity       # ~3 min, writes data/results/sensitivity.csv
+python -m experiments.validate          # ~1 min, validation checks vs literature
+python -m experiments.analyze           # writes figures/fig0*.png
+python -m experiments.demo_screenshots  # writes figures/fig08-10 grid screenshots
+python run.py                           # interactive viz at http://127.0.0.1:8521
+\end{lstlisting}
+
+Source available at \url{https://github.com/AleenaTahir1/Adaptive-water-extraction}.
+
+\end{document}

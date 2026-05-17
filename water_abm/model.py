@@ -24,6 +24,7 @@ from .agents import (
     AlwaysDefectAgent,
     IrrigatorAgent,
     MonitorAgent,
+    RiverCellAgent,
     STRATEGY_REGISTRY,
     TitForTatAgent,
 )
@@ -154,6 +155,15 @@ class WaterCommonsModel(mesa.Model):
         self.schedule = RandomActivation(self)
         self.grid = MultiGrid(grid_width, grid_height, torus=False)
         self.river_column = 0
+
+        # Place visual-only river cell agents along the river column so the
+        # CanvasGrid can render the river shading based on current water level.
+        # These are NOT in the scheduler -- agent_portrayal reads their color
+        # from m.water.normalized_level each frame.
+        next_uid = n_farmers + 5000
+        for y in range(grid_height):
+            cell = RiverCellAgent(next_uid + y, self)
+            self.grid.place_agent(cell, (self.river_column, y))
 
         # Build social network: each farmer observes social_degree neighbors.
         self.social_neighbors = build_social_network(

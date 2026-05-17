@@ -19,7 +19,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import Slider, Choice
 from mesa.visualization.modules import CanvasGrid, ChartModule, TextElement
 
-from .agents import IrrigatorAgent, MonitorAgent
+from .agents import IrrigatorAgent, MonitorAgent, RiverCellAgent
 from .model import WaterCommonsModel
 
 
@@ -36,23 +36,56 @@ STRATEGY_SHAPES = {
 }
 
 
+def water_to_color(normalized_level: float) -> str:
+    """Map water level (0..1) to a river color.
+
+    High water: deep blue. Mid: medium blue. Low: pale blue.
+    Collapsed (~0): brown/dry-bed color to visually signal disaster.
+    """
+    if normalized_level <= 0.02:
+        return "#7a5230"  # dry brown bed
+    if normalized_level < 0.15:
+        return "#c9d9e8"  # pale blue, near-empty
+    if normalized_level < 0.35:
+        return "#7fb3d5"  # light blue
+    if normalized_level < 0.65:
+        return "#2980b9"  # mid blue
+    return "#1b4f72"      # deep blue, full
+
+
 def agent_portrayal(agent):
     """Tell Mesa how to draw each agent (and each river/land patch)."""
+    # --- River cells: color reflects current water level ----------------
+    if isinstance(agent, RiverCellAgent):
+        return {
+            "Shape": "rect",
+            "Filled": "true",
+            "Color": water_to_color(agent.model.water.normalized_level),
+            "Layer": 0,
+            "w": 1.0,
+            "h": 1.0,
+        }
+
+    # --- Monitor: black star ---------------------------------------------
     if isinstance(agent, MonitorAgent):
         return {
             "Shape": "rect",
             "Filled": "true",
-            "Color": "#222222",
+            "Color": "#000000",
             "Layer": 2,
-            "w": 0.8,
-            "h": 0.8,
+            "w": 0.9,
+            "h": 0.9,
             "text": "M",
-            "text_color": "white",
+            "text_color": "yellow",
         }
 
+    # --- Irrigators: color = action level, size scales with extraction ---
     if isinstance(agent, IrrigatorAgent):
         color = ACTION_COLORS[agent.last_action_idx]
         shape = STRATEGY_SHAPES.get(agent.strategy_type, "circle")
+        # Radius grows with action level so over-extractors look BIG and red,
+        # cooperators stay small and blue. Much easier to read at a glance.
+        radius = 0.35 + 0.25 * (agent.last_action_idx / 4.0)
         portrayal = {
             "Shape": shape,
             "Filled": "true",
@@ -60,11 +93,10 @@ def agent_portrayal(agent):
             "Layer": 1,
         }
         if shape == "circle":
-            portrayal["r"] = 0.6
+            portrayal["r"] = radius
         else:
-            portrayal["w"] = 0.7
-            portrayal["h"] = 0.7
-        # Annotate Q-learners vs fixed-strategy with single-letter labels
+            portrayal["w"] = radius * 1.2
+            portrayal["h"] = radius * 1.2
         labels = {
             "q_learner": "Q",
             "always_coop": "C",
@@ -90,20 +122,57 @@ class WaterLevelPatch(mesa.Agent):
 
 
 class WaterStatusText(TextElement):
-    """Top-of-page text monitor: water level, climate, cooperation, detections."""
+    """Big visual status banner: water bar + climate state + verdict."""
 
     def render(self, model):
         water_pct = model.water.normalized_level * 100
         cf = model.current_climate_factor()
         coop = model.cooperation_index
-        return (
-            f"<b>Step:</b> {model.step_count} &nbsp;|&nbsp; "
-            f"<b>Water:</b> {model.water.level:.1f} ({water_pct:.1f}% of K) &nbsp;|&nbsp; "
-            f"<b>Climate factor:</b> {cf:.2f} &nbsp;|&nbsp; "
-            f"<b>Mean ext:</b> {model.mean_extraction_this_step:.2f} &nbsp;|&nbsp; "
-            f"<b>Coop index:</b> {coop:.2f} &nbsp;|&nbsp; "
-            f"<b>Detections:</b> {model.monitor.n_detections}"
-        )
+        det = model.monitor.n_detections
+
+        # Color the water bar by health.
+        if water_pct >= 60:
+            bar_color = "#1b4f72"; verdict = "HEALTHY"
+        elif water_pct >= 30:
+            bar_color = "#2980b9"; verdict = "STRESSED"
+        elif water_pct >= 10:
+            bar_color = "#e67e22"; verdict = "DEPLETING"
+        else:
+            bar_color = "#c0392b"; verdict = "COLLAPSED"
+
+        # Climate label.
+        if cf >= 0.9:
+            climate_state = "NORMAL"
+            climate_color = "#27ae60"
+        elif cf >= 0.6:
+            climate_state = "MILD STRESS"
+            climate_color = "#f39c12"
+        else:
+            climate_state = "DROUGHT"
+            climate_color = "#c0392b"
+
+        bar_pct = max(2.0, water_pct)
+        scenario_name = type(model.climate).__name__.replace("Climate", "").replace("Decline", " decline")
+        return f"""
+<div style="font-family: -apple-system, sans-serif; padding: 12px; background: #f7f9fa; border-radius: 8px; margin: 8px 0;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <div style="font-size: 16px;"><b>Step {model.step_count}</b> &nbsp;&middot;&nbsp; <span style="color: #555;">scenario: <b>{scenario_name}</b></span></div>
+    <div style="font-size: 22px; font-weight: bold; color: {bar_color};">RIVER: {verdict}</div>
+  </div>
+  <div style="background: #ddd; border-radius: 6px; height: 28px; position: relative; overflow: hidden;">
+    <div style="background: {bar_color}; height: 100%; width: {bar_pct}%; transition: width 0.3s;"></div>
+    <div style="position: absolute; top: 0; left: 0; right: 0; height: 100%; line-height: 28px; text-align: center; color: white; font-weight: bold; text-shadow: 0 0 4px rgba(0,0,0,0.6);">
+      {model.water.level:.0f} / {model.water.carrying_capacity:.0f} units ({water_pct:.1f}%)
+    </div>
+  </div>
+  <div style="display: flex; justify-content: space-around; margin-top: 12px; font-size: 14px;">
+    <div>Climate: <b style="color: {climate_color};">{climate_state}</b> (cf={cf:.2f})</div>
+    <div>Mean extraction/step: <b>{model.mean_extraction_this_step:.2f}</b></div>
+    <div>Cooperation index: <b>{coop:.2f}</b></div>
+    <div>Cumulative detections: <b>{det}</b></div>
+  </div>
+</div>
+"""
 
 
 # --- Mesa modules ----------------------------------------------------------
@@ -174,9 +243,10 @@ model_params = {
 
 def create_server() -> ModularServer:
     status = WaterStatusText()
+    # Status banner FIRST so the user sees the big water bar before the grid.
     return ModularServer(
         WaterCommonsModel,
-        [grid_canvas, status, water_chart, cooperation_chart, inequality_chart],
+        [status, grid_canvas, water_chart, cooperation_chart, inequality_chart],
         "Water Commons ABM with Q-Learning",
         model_params,
     )

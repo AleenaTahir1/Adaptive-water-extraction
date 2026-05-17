@@ -233,6 +233,20 @@ STRATEGY_REGISTRY: dict[str, type[IrrigatorAgent]] = {
 }
 
 
+class RiverCellAgent(mesa.Agent):
+    """A purely visual agent occupying one cell of the river column.
+
+    Not added to the scheduler; serves only as a CanvasGrid placeholder
+    so the river column can be colored by current water level (via
+    server.agent_portrayal). Without these dummies, Mesa's CanvasGrid
+    would render blank cells regardless of water state.
+    """
+
+    def __init__(self, unique_id: int, model: mesa.Model):
+        super().__init__(unique_id, model)
+        self.strategy_type = "river_cell"
+
+
 # ---------------------------------------------------------------------------
 # Monitor / water-authority agent (Phase 5)
 # ---------------------------------------------------------------------------
