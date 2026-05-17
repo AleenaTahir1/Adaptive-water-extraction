@@ -75,7 +75,11 @@ python -m experiments.analyze
 
 
 ## Authors
-
+Aleena Tahir 
+Saqlain Abbas
+Aena Habib
+Eman Asghar 
+Dua Kamal
 
 ## License
 
