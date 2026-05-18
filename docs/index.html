@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adaptive Water Extraction with Q-Learning</title>
+<meta name="description" content="An agent-based model exploring whether decentralized Q-learning agents can solve the tragedy of the commons under climate stress." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <a class="nav__brand" href="#top">
+    <span class="dot dot--coral"></span>
+    <span class="dot dot--teal"></span>
+    <span class="dot dot--indigo"></span>
+    <span class="brand-text">Water Commons</span>
+  </a>
+  <div class="nav__links">
+    <a href="#findings">Findings</a>
+    <a href="#model">Model</a>
+    <a href="#figures">Figures</a>
+    <a href="#team">Team</a>
+    <a class="nav__cta" href="https://github.com/AleenaTahir1/Adaptive-water-extraction" target="_blank" rel="noopener">GitHub →</a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="top">
+  <div class="hero__inner">
+    <div class="kicker"><span class="kicker__dot"></span>Agent-Based Modeling · Semester Project</div>
+    <h1 class="hero__title">
+      Adaptive Water Extraction<br />
+      <span class="hero__title--accent">with Q&nbsp;Learning</span>
+      <span class="hero__title--muted">under Climate Stress</span>
+    </h1>
+    <p class="hero__lede">
+      Twenty farmers, one river, and a learning algorithm.
+      We ask whether decentralized AI agents can avoid the Tragedy of the Commons —
+      and what happens when climate shocks rewrite the rules.
+    </p>
+    <div class="hero__cta">
+      <a class="btn btn--primary" href="assets/report.pdf" target="_blank" rel="noopener">
+        Read the report
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+      <a class="btn btn--secondary" href="assets/presentation.pdf" target="_blank" rel="noopener">View slides</a>
+      <a class="btn btn--secondary" href="assets/presentation.pptx">Download .pptx</a>
+      <a class="btn btn--ghost" href="https://github.com/AleenaTahir1/Adaptive-water-extraction" target="_blank" rel="noopener">Source code</a>
+    </div>
+    <div class="hero__stats">
+      <div class="stat"><div class="stat__num">340</div><div class="stat__label">simulation runs</div></div>
+      <div class="stat"><div class="stat__num">5</div><div class="stat__label">climate scenarios</div></div>
+      <div class="stat"><div class="stat__num">20</div><div class="stat__label">learning agents</div></div>
+      <div class="stat"><div class="stat__num">500</div><div class="stat__label">steps per run</div></div>
+    </div>
+  </div>
+  <div class="hero__blob"></div>
+</header>
+
+<!-- ============ ABSTRACT ============ -->
+<section class="section section--narrow" id="about">
+  <div class="reveal">
+    <div class="eyebrow eyebrow--coral">The problem</div>
+    <h2 class="section__title">A shared river, a learning brain, a changing climate.</h2>
+    <p class="lede">
+      Across the world, agricultural communities depend on shared rivers and aquifers.
+      Each farmer faces the same dilemma: extracting more is privately rational but
+      collectively suicidal. Hardin (1968) called this the <em>Tragedy of the Commons</em>.
+      Climate change makes the dilemma sharper.
+    </p>
+    <p class="lede">
+      Existing agent-based models assume farmers follow fixed rules &mdash; cooperate,
+      defect, or tit-for-tat. Real communities <strong>learn</strong>. We equipped each
+      irrigator with an independent tabular Q-learning algorithm and tested whether
+      cooperation emerges, and what happens when the climate breaks.
+    </p>
+  </div>
+</section>
+
+<!-- ============ FINDINGS ============ -->
+<section class="section section--gradient" id="findings">
+  <div class="reveal">
+    <div class="eyebrow eyebrow--teal">Three findings</div>
+    <h2 class="section__title">What the simulation revealed.</h2>
+  </div>
+  <div class="findings">
+    <article class="finding reveal" style="--accent: var(--coral);">
+      <div class="finding__num">01</div>
+      <h3>Tragedy is reproducible.</h3>
+      <p>Without enforcement, pure Q-learners collapse the resource in every climate scenario within ~80 steps. Mean water falls to ~5 / 1000 units; payoffs go strongly negative.</p>
+      <div class="finding__metric"><strong>Final water:</strong> 5.5 ± 0.0 (all scenarios)</div>
+    </article>
+    <article class="finding reveal" style="--accent: var(--emerald);">
+      <div class="finding__num">02</div>
+      <h3>Enforcement saves the stable climate.</h3>
+      <p>Adding a monitor with detection probability <code>p_detect = 0.3</code> flips the dynamics. Mean final water rises 125&times;, payoffs turn positive, 86% of agents pick cooperative actions.</p>
+      <div class="finding__metric"><strong>Final water:</strong> 685 ± 33 (stable climate)</div>
+    </article>
+    <article class="finding reveal" style="--accent: var(--indigo);">
+      <div class="finding__num">03</div>
+      <h3>Under stress, even strong enforcement fails.</h3>
+      <p>The <em>same</em> intensity collapses every other scenario. Raising <code>p_detect</code> to 0.9 does not rescue drought-shock runs. Fixed-quota policy breaks structurally when climate changes.</p>
+      <div class="finding__metric"><strong>Implication:</strong> climate-adaptive quotas needed</div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ MODEL ============ -->
+<section class="section" id="model">
+  <div class="reveal">
+    <div class="eyebrow eyebrow--purple">How it works</div>
+    <h2 class="section__title">The model in one diagram.</h2>
+  </div>
+  <div class="model-grid">
+    <div class="model-card reveal">
+      <div class="model-card__icon">👥</div>
+      <h4>20 irrigator agents</h4>
+      <p>Each chooses one of five extraction levels every season. Q-table maps observed state to expected reward.</p>
+    </div>
+    <div class="model-card reveal">
+      <div class="model-card__icon">💧</div>
+      <h4>Shared water resource</h4>
+      <p>Logistic regeneration plus baseline inflow, modulated by a climate factor c<sub>f</sub>(t).</p>
+    </div>
+    <div class="model-card reveal">
+      <div class="model-card__icon">🛡️</div>
+      <h4>Monitor agent</h4>
+      <p>Catches over-extractors with probability p<sub>detect</sub> and issues fines proportional to excess extraction.</p>
+    </div>
+    <div class="model-card reveal">
+      <div class="model-card__icon">🧠</div>
+      <h4>Bellman update</h4>
+      <p>Q(s,a) ← Q(s,a) + α·[r + γ·max Q(s′,a′) − Q(s,a)]. Tabular, interpretable, transparent.</p>
+    </div>
+  </div>
+  <div class="scenarios reveal">
+    <h3 class="scenarios__title">Four climate scenarios test resilience</h3>
+    <div class="scenarios__grid">
+      <div class="scenario"><div class="scenario__name">Stable</div><div class="scenario__desc">c<sub>f</sub> = 1.0 forever. Baseline.</div></div>
+      <div class="scenario"><div class="scenario__name">Gradual</div><div class="scenario__desc">c<sub>f</sub> declines 1.0 → 0.5 over 400 steps.</div></div>
+      <div class="scenario"><div class="scenario__name">Shock</div><div class="scenario__desc">c<sub>f</sub> drops to 0.3 for steps 200–300.</div></div>
+      <div class="scenario"><div class="scenario__name">Stochastic</div><div class="scenario__desc">c<sub>f</sub> ~ N(0.85, 0.15²), clipped.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FIGURES ============ -->
+<section class="section section--gradient" id="figures">
+  <div class="reveal">
+    <div class="eyebrow eyebrow--amber">Selected figures</div>
+    <h2 class="section__title">Evidence from 340 runs.</h2>
+  </div>
+  <div class="figgrid">
+    <figure class="figcard figcard--wide reveal">
+      <img src="figures/fig01_water_by_scenario.png" alt="Water level over time across four climate scenarios" />
+      <figcaption><strong>Fig 1.</strong> Water level over time — tragedy baseline (dashed) vs. moderate enforcement (solid).</figcaption>
+    </figure>
+    <figure class="figcard reveal">
+      <img src="figures/fig02_enforcement_effect.png" alt="Final water level by climate and enforcement" />
+      <figcaption><strong>Fig 2.</strong> Final water level and cooperation index by climate × enforcement.</figcaption>
+    </figure>
+    <figure class="figcard reveal">
+      <img src="figures/fig03_gamma_sweep.png" alt="Effect of discount factor gamma" />
+      <figcaption><strong>Fig 3.</strong> Primary RQ: effect of γ on sustainable extraction.</figcaption>
+    </figure>
+    <figure class="figcard reveal">
+      <img src="figures/fig04_sensitivity_tornado.png" alt="Sensitivity tornado plot" />
+      <figcaption><strong>Fig 4.</strong> ±20% sensitivity analysis. p<sub>detect</sub> dominates.</figcaption>
+    </figure>
+    <figure class="figcard reveal">
+      <img src="figures/fig07_validation.png" alt="Three validation checks" />
+      <figcaption><strong>Fig 5.</strong> Validation against Hardin 1968, Perolat 2017, Indus 2022 — all pass.</figcaption>
+    </figure>
+  </div>
+  <div class="spatialgrid reveal">
+    <h3 class="spatialgrid__title">Spatial dynamics under drought shock</h3>
+    <div class="spatialgrid__items">
+      <figure class="snap">
+        <img src="figures/fig08_grid_pre_shock.png" alt="Pre-shock grid state" />
+        <figcaption>Step 199 — cooperation established</figcaption>
+      </figure>
+      <figure class="snap">
+        <img src="figures/fig09_grid_during_shock.png" alt="Mid-shock grid state" />
+        <figcaption>Step 260 — drought pressure</figcaption>
+      </figure>
+      <figure class="snap">
+        <img src="figures/fig10_grid_recovery.png" alt="Post-shock equilibrium" />
+        <figcaption>Step 450 — post-shock equilibrium</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VALIDATION ============ -->
+<section class="section" id="validation">
+  <div class="reveal">
+    <div class="eyebrow eyebrow--emerald">Validation</div>
+    <h2 class="section__title">Tested against the literature.</h2>
+    <p class="lede">Three structured sanity checks run automatically in <code>experiments/validate.py</code>. All three pass.</p>
+  </div>
+  <div class="checks">
+    <div class="check reveal">
+      <div class="check__badge">PASS</div>
+      <div class="check__source">Hardin (1968)</div>
+      <p>Without enforcement the resource collapses (5.6); with enforcement under stable climate it sustains (504).</p>
+    </div>
+    <div class="check reveal">
+      <div class="check__badge">PASS</div>
+      <div class="check__source">Perolat et al. (2017)</div>
+      <p>Defection fraction during the shock window: 25.3% under stable vs 36.5% under shock. Scarcity drives aggression.</p>
+    </div>
+    <div class="check reveal">
+      <div class="check__badge">PASS</div>
+      <div class="check__source">Indus Basin 2022</div>
+      <p>A 70% drop in c<sub>f</sub> leaves a measurable dip: water at step 300 is 507 (stable) vs 1.5 (shock).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEAM ============ -->
+<section class="section section--gradient" id="team">
+  <div class="reveal">
+    <div class="eyebrow eyebrow--coral">The team</div>
+    <h2 class="section__title">Five contributors. One model.</h2>
+    <p class="lede">A semester project from the Department of Artificial Intelligence at NUTECH, supervised by Ms. Sumera Aslam.</p>
+  </div>
+  <div class="team">
+    <div class="member reveal"><div class="member__avatar" style="--accent: var(--coral);">SA</div><div class="member__name">Saqlain Abbas</div></div>
+    <div class="member reveal"><div class="member__avatar" style="--accent: var(--teal);">AT</div><div class="member__name">Aleena Tahir</div></div>
+    <div class="member reveal"><div class="member__avatar" style="--accent: var(--amber);">AH</div><div class="member__name">Aena Habib</div></div>
+    <div class="member reveal"><div class="member__avatar" style="--accent: var(--purple);">EA</div><div class="member__name">Eman Asghar</div></div>
+    <div class="member reveal"><div class="member__avatar" style="--accent: var(--emerald);">DK</div><div class="member__name">Dua Kamal</div></div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta-section">
+  <div class="reveal">
+    <h2>Explore the simulation yourself.</h2>
+    <p>Clone the repo, install the requirements, and run <code>python run.py</code> for the interactive Mesa visualization with live sliders and charts.</p>
+    <div class="cta-section__buttons">
+      <a class="btn btn--primary" href="https://github.com/AleenaTahir1/Adaptive-water-extraction" target="_blank" rel="noopener">View on GitHub</a>
+      <a class="btn btn--secondary" href="assets/report.pdf" target="_blank" rel="noopener">Download report (PDF)</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div>
+    <strong>Adaptive Water Extraction with Q-Learning</strong> ·
+    Agent-Based Modeling, Spring 2026
+  </div>
+  <div class="footer__small">
+    National University of Technology · Department of Artificial Intelligence
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
