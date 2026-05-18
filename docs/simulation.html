@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive Simulation — Adaptive Water Extraction</title>
+<meta name="description" content="Run the agent-based simulation live in your browser. Real Python via Pyodide." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="sim.css" />
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Same nav as the home page (links back) -->
+<nav class="nav">
+  <a class="nav__brand" href="index.html">
+    <span class="dot dot--coral"></span>
+    <span class="dot dot--teal"></span>
+    <span class="dot dot--indigo"></span>
+    <span class="brand-text">Water Commons</span>
+  </a>
+  <div class="nav__links">
+    <a href="index.html#findings">Findings</a>
+    <a href="index.html#model">Model</a>
+    <a href="index.html#figures">Figures</a>
+    <a href="index.html#team">Team</a>
+    <a class="nav__cta" href="https://github.com/AleenaTahir1/Adaptive-water-extraction" target="_blank" rel="noopener">GitHub →</a>
+  </div>
+</nav>
+
+<header class="sim-hero">
+  <div class="sim-hero__inner">
+    <div class="kicker"><span class="kicker__dot"></span>Live · Python in your browser</div>
+    <h1 class="sim-hero__title">Run the simulation</h1>
+    <p class="sim-hero__lede">
+      The real Mesa model running on Pyodide (Python compiled to WebAssembly).
+      Adjust parameters, hit Setup, then press Start. No server required.
+    </p>
+  </div>
+</header>
+
+<!-- Loading overlay -->
+<div id="loading" class="loading">
+  <div class="loading__panel">
+    <div class="loading__spinner"></div>
+    <div class="loading__title">Loading Python runtime</div>
+    <div id="loading-status" class="loading__status">Downloading Pyodide…</div>
+    <div class="loading__hint">First load is ~12 MB. Cached after that.</div>
+  </div>
+</div>
+
+<main class="sim-main" id="sim-main" style="display: none;">
+
+  <!-- Status banner -->
+  <div class="status">
+    <div class="status__row">
+      <div>
+        <div class="status__label">Step</div>
+        <div class="status__val" id="status-step">0</div>
+      </div>
+      <div>
+        <div class="status__label">Water</div>
+        <div class="status__val"><span id="status-water">800</span> <span class="status__unit">/ 1000</span></div>
+      </div>
+      <div>
+        <div class="status__label">Climate factor</div>
+        <div class="status__val" id="status-cf">1.00</div>
+      </div>
+      <div>
+        <div class="status__label">Mean extraction</div>
+        <div class="status__val" id="status-ext">0.00</div>
+      </div>
+      <div>
+        <div class="status__label">Cooperation index</div>
+        <div class="status__val" id="status-coop">—</div>
+      </div>
+      <div>
+        <div class="status__label">River health</div>
+        <div class="status__val status__verdict" id="status-verdict">—</div>
+      </div>
+    </div>
+    <!-- Water bar -->
+    <div class="waterbar">
+      <div id="waterbar-fill" class="waterbar__fill"></div>
+    </div>
+  </div>
+
+  <div class="sim-grid">
+    <!-- Spatial canvas -->
+    <section class="panel">
+      <div class="panel__title">Spatial grid</div>
+      <canvas id="grid-canvas" width="400" height="400"></canvas>
+      <div class="legend">
+        <span class="legend__item"><span class="legend__swatch" style="background:#1f77ff"></span>action 0 (none)</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:#5da5da"></span>action 1</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:#cccc00"></span>action 2 (fair share)</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:#ff9933"></span>action 3</span>
+        <span class="legend__item"><span class="legend__swatch" style="background:#cc0000"></span>action 4 (max)</span>
+        <span class="legend__item"><span class="legend__swatch legend__swatch--star"></span>monitor</span>
+      </div>
+    </section>
+
+    <!-- Chart -->
+    <section class="panel">
+      <div class="panel__title">Water level over time</div>
+      <canvas id="chart-canvas"></canvas>
+      <div class="panel__sub">Last 200 steps. Dashed line marks 20% (critical threshold).</div>
+    </section>
+  </div>
+
+  <!-- Controls -->
+  <section class="controls">
+    <div class="controls__row">
+      <button id="btn-setup" class="btn btn--primary">Setup</button>
+      <button id="btn-step"  class="btn btn--secondary" disabled>Step</button>
+      <button id="btn-run"   class="btn btn--secondary" disabled>▶ Start</button>
+      <button id="btn-reset" class="btn btn--ghost"    disabled>Reset</button>
+      <span class="controls__speed">
+        Speed:
+        <input type="range" id="speed-slider" min="1" max="30" value="10" />
+        <span id="speed-label">10 fps</span>
+      </span>
+    </div>
+
+    <details class="params" open>
+      <summary>Parameters</summary>
+      <div class="params__grid">
+        <label class="param">
+          <span>N farmers</span>
+          <input id="p-n" type="range" min="5" max="50" step="1" value="20" />
+          <span class="param__val" id="p-n-val">20</span>
+        </label>
+        <label class="param">
+          <span>Learning rate α</span>
+          <input id="p-alpha" type="range" min="0.05" max="0.40" step="0.01" value="0.15" />
+          <span class="param__val" id="p-alpha-val">0.15</span>
+        </label>
+        <label class="param">
+          <span>Discount γ</span>
+          <input id="p-gamma" type="range" min="0.5" max="0.99" step="0.01" value="0.95" />
+          <span class="param__val" id="p-gamma-val">0.95</span>
+        </label>
+        <label class="param">
+          <span>Initial ε₀</span>
+          <input id="p-eps" type="range" min="0.1" max="1.0" step="0.05" value="0.30" />
+          <span class="param__val" id="p-eps-val">0.30</span>
+        </label>
+        <label class="param">
+          <span>p_detect (enforcement)</span>
+          <input id="p-detect" type="range" min="0" max="1" step="0.05" value="0.0" />
+          <span class="param__val" id="p-detect-val">0.00</span>
+        </label>
+        <label class="param">
+          <span>Regeneration r</span>
+          <input id="p-r" type="range" min="0.05" max="0.30" step="0.01" value="0.10" />
+          <span class="param__val" id="p-r-val">0.10</span>
+        </label>
+        <label class="param">
+          <span>Climate scenario</span>
+          <select id="p-climate">
+            <option value="stable">Stable</option>
+            <option value="gradual">Gradual decline</option>
+            <option value="shock">Drought shock</option>
+            <option value="stochastic">Stochastic</option>
+          </select>
+        </label>
+        <label class="param">
+          <span>Seed</span>
+          <input id="p-seed" type="number" min="0" max="9999" step="1" value="42" />
+        </label>
+      </div>
+    </details>
+  </section>
+
+  <!-- Quick presets -->
+  <section class="presets">
+    <strong>Quick demos:</strong>
+    <button class="preset" data-preset="tragedy">Tragedy (no enforcement)</button>
+    <button class="preset" data-preset="cooperation">Cooperation emerges (p=0.3)</button>
+    <button class="preset" data-preset="shock">Drought shock</button>
+    <button class="preset" data-preset="strong">Strong enforcement still fails (shock + p=0.9)</button>
+  </section>
+</main>
+
+<footer class="footer">
+  <div><strong>Adaptive Water Extraction with Q-Learning</strong> · Live simulation via Pyodide</div>
+  <div class="footer__small">National University of Technology · Department of Artificial Intelligence</div>
+</footer>
+
+<script src="sim.js"></script>
+</body>
+</html>
